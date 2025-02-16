@@ -12,6 +12,7 @@ export async function POST(req) {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
+      // If the user exists, return a 200 status with a message
       return new Response(
         JSON.stringify({ message: 'User already exists', user: existingUser }),
         { status: 200 }
@@ -19,7 +20,7 @@ export async function POST(req) {
     }
 
     // Create and save the new user
-    const newUser = new User({ email, name });
+    const newUser = new User({ email, name, file: [] });
     await newUser.save();
 
     return new Response(
@@ -28,6 +29,15 @@ export async function POST(req) {
     );
   } catch (error) {
     console.error('Error saving user:', error);
+
+    // Check if the error is a duplicate key error
+    if (error.code === 11000) {
+      return new Response(
+        JSON.stringify({ error: 'User with this email already exists' }),
+        { status: 200 } // Return 200 if you still want to handle it as a non-error case
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: 'Failed to save user', details: error.message }),
       { status: 500 }
