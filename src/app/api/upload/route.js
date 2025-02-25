@@ -10,12 +10,6 @@ import User from '../../models/User';
 
 dotenvConfig();
 
-// cloudinary.config({
-//     cloud_name: process.env.CLOUD_NAME,
-//     api_key: process.env.API_KEY_CLOUDINARY,
-//     api_secret: process.env.API_SECRET_CLOUDINARY,
-// });
-
 const unlinkAsync = promisify(fs.unlink);
 const upload = multer({ dest: '/tmp' });
 
@@ -45,12 +39,18 @@ export async function POST(req) {
       // Connect to MongoDB and update the user
       await connect();
       const user = await User.updateOne(
-          { email: emails }, 
-          { $push: { file: result.secure_url } }
+        { email: emails }, 
+        { $push: { file: { url: result.secure_url, id: result.public_id } } },
+        { runValidators: true }
       );
-
-      if (user.nModified === 0) {
-          return NextResponse.json({ success: false, message: 'User update failed' }, { status: 500 });
+      
+      console.log("MongoDB update response:", user);
+      
+      if (user.matchedCount === 0) {
+        return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      }
+      if (user.modifiedCount === 0) {
+        return NextResponse.json({ success: false, message: 'User update failed' }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, message: 'Image uploaded', data: result });
